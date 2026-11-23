@@ -161,7 +161,7 @@ function buildTerrain(S, world) {
       vec3 mcol = mix(vec3(0.2, 0.27, 0.58), vec3(0.4, 0.5, 0.8), sx);
       mcol = mix(mcol, vec3(0.13, 0.19, 0.44), smoothstep(0.0, -0.5, ridge) * 0.6);
       mcol = mix(mcol, vec3(0.55, 0.64, 0.88), smoothstep(0.5, 0.9, ridge) * smoothstep(0.6, 0.9, sy) * 0.5);
-      base = mix(base, mcol, mt);
+      base = mix(base, mcol * (1.0 - 0.3 * uNight), mt);   // the hills stand dark against the night sky
       T = normalize(mix(T, sl > 0.03 ? contour / sl : T, mt));
       T = normalize(T - n * dot(T, n) + vec3(1e-5));
       float ao = 1.0 - R.a * 0.62;
@@ -346,8 +346,8 @@ function buildCypresses(S, world) {
       vec3 V = normalize(cameraPosition - vW);
       // deep green flames, lighter and blue-green where they turn to the light, umber at their edges
       // the painting's cypress: mid greens with lighter strokes, and warm, fairly light browns
-      vec3 dark = vec3(0.1, 0.25, 0.15), mid = vec3(0.19, 0.41, 0.23), hi = vec3(0.36, 0.56, 0.3);
-      vec3 blueGreen = vec3(0.14, 0.36, 0.36), umber = vec3(0.54, 0.33, 0.16);
+      vec3 dark = vec3(0.09, 0.26, 0.13), mid = vec3(0.17, 0.44, 0.2), hi = vec3(0.36, 0.62, 0.27);
+      vec3 blueGreen = vec3(0.12, 0.38, 0.33), umber = vec3(0.6, 0.34, 0.13);
       vec3 base = mix(dark, mid, 0.35 + 0.65 * seeds.x * (0.6 + 0.4 * vInfo.x));
       base = mix(base, hi, smoothstep(0.62, 0.95, seeds.x) * smoothstep(-0.2, 0.6, dot(n, uLightDir)) * 0.8);
       base = mix(base, blueGreen, smoothstep(0.3, 0.05, seeds.y) * 0.45);
@@ -356,7 +356,7 @@ function buildCypresses(S, world) {
       base = mix(base, umber, edgeLine * 0.85);
       vec3 col = shadeLit(base * 1.35, n, mix(0.6, 1.0, smoothstep(0.0, 0.3, vH)));
       col += lampLight(vW, base) * 0.6;
-      col = mix(col, nightShift(col), 0.35);                // keep its greens and browns at night
+      col = mix(col, nightShift(col), 0.15);                // keep its greens and browns at night
       col = mix(col, base * 1.2, edgeLine * 0.45);
       col = applyFog(col, dist);
       // strokes run up each tongue along its own spine
@@ -454,7 +454,7 @@ function buildOlives(S, world) {
         base = mix(base, vec3(0.3, 0.42, 0.62), smoothstep(0.32, 0.05, seeds.y) * 0.55);
         // foliage painted in curls, like the rounded blue-green trees round the painting's village:
         // strokes wind round small centres scattered over the crown, each curl with a pale rim
-        base = mix(base * 1.12, vec3(0.28, 0.5, 0.5), 0.35);
+        base = mix(base * 1.12, vec3(0.26, 0.52, 0.42), 0.35);
         vec4 cc = nearestCentre(vW / 1.1);
         vec3 rv = vW - cc.xyz * 1.1; rv -= n * dot(rv, n);
         float rr = length(rv) / 1.1;

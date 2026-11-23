@@ -9,9 +9,9 @@ const MOODS = {
   night: {
     skyTop: '#22408e', skyMid: '#3463ac', skyHor: '#5f8fb8', swirlA: '#86c4d8', swirlB: '#eef3cf',
     sunCol: '#ffe070', starCore: '#fffbd0', starHalo: '#f2dc66', cloudCol: '#c8d8f0', cloudShade: '#5a78b0',
-    lightCol: '#8aa8d8', ambSky: '#5874c0', ambGround: '#30447a', shadowTint: '#28287a', fog: '#2c4c8c',
+    lightCol: '#a6b6d6', ambSky: '#5f74b0', ambGround: '#3a4668', shadowTint: '#28287a', fog: '#2c4c8c',
     outline: '#081030', waterDeep: '#0c2050', lampCol: '#ffc04a', canvas: '#e9e1cc',
-    cloudAmt: 0.0, lampAmt: 1.0, windowAmt: 1.0, sat: 1.12, contrast: 1.06, vignette: 0.32, bloom: 0.45,
+    cloudAmt: 0.0, lampAmt: 1.0, windowAmt: 1.0, sat: 1.16, contrast: 1.15, vignette: 0.32, bloom: 0.45,
   },
   dawn: {
     skyTop: '#4f62b4', skyMid: '#d9a3b0', skyHor: '#f6cf86', swirlA: '#f8d6b8', swirlB: '#fff4d8',

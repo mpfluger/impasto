@@ -218,7 +218,7 @@ vec3 lampLight(vec3 wp, vec3 base){
 vec3 nightShift(vec3 col){
   float l = lum(col);
   vec3 nc = vec3(l * 0.55, l * 0.85 + 0.02, l * 1.3 + 0.07);
-  return mix(col, nc, uNight * 0.3) * (1.0 + uNight * 0.18);
+  return mix(col, nc, uNight * 0.16) * (1.0 + uNight * 0.18);   // a light blue cast, not a blue wash
 }
 vec3 applyFog(vec3 col, float dist){
   float f = smoothstep(80.0, 900.0, dist);
