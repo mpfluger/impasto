@@ -345,8 +345,9 @@ function buildCypresses(S, world) {
       strokeCellMoved(vRest, vW, dist);
       vec3 V = normalize(cameraPosition - vW);
       // deep green flames, lighter and blue-green where they turn to the light, umber at their edges
-      vec3 dark = vec3(0.06, 0.18, 0.11), mid = vec3(0.12, 0.33, 0.18), hi = vec3(0.27, 0.48, 0.25);
-      vec3 blueGreen = vec3(0.1, 0.3, 0.32), umber = vec3(0.44, 0.23, 0.09);
+      // the painting's cypress: mid greens with lighter strokes, and warm, fairly light browns
+      vec3 dark = vec3(0.1, 0.25, 0.15), mid = vec3(0.19, 0.41, 0.23), hi = vec3(0.36, 0.56, 0.3);
+      vec3 blueGreen = vec3(0.14, 0.36, 0.36), umber = vec3(0.54, 0.33, 0.16);
       vec3 base = mix(dark, mid, 0.35 + 0.65 * seeds.x * (0.6 + 0.4 * vInfo.x));
       base = mix(base, hi, smoothstep(0.62, 0.95, seeds.x) * smoothstep(-0.2, 0.6, dot(n, uLightDir)) * 0.8);
       base = mix(base, blueGreen, smoothstep(0.3, 0.05, seeds.y) * 0.45);
@@ -355,8 +356,8 @@ function buildCypresses(S, world) {
       base = mix(base, umber, edgeLine * 0.85);
       vec3 col = shadeLit(base * 1.35, n, mix(0.6, 1.0, smoothstep(0.0, 0.3, vH)));
       col += lampLight(vW, base) * 0.6;
-      col = mix(col, nightShift(col), 0.5);                 // keep its greens and browns at night
-      col = mix(col, base * 1.15, edgeLine * 0.45);
+      col = mix(col, nightShift(col), 0.35);                // keep its greens and browns at night
+      col = mix(col, base * 1.2, edgeLine * 0.45);
       col = applyFog(col, dist);
       // strokes run up each tongue along its own spine
       writeOut(col, 3.0, 1.0, screenDir(vW, vT), seeds);
@@ -453,7 +454,7 @@ function buildOlives(S, world) {
         base = mix(base, vec3(0.3, 0.42, 0.62), smoothstep(0.32, 0.05, seeds.y) * 0.55);
         // foliage painted in curls, like the rounded blue-green trees round the painting's village:
         // strokes wind round small centres scattered over the crown, each curl with a pale rim
-        base = mix(base, vec3(0.2, 0.42, 0.46), 0.35);
+        base = mix(base * 1.12, vec3(0.28, 0.5, 0.5), 0.35);
         vec4 cc = nearestCentre(vW / 1.1);
         vec3 rv = vW - cc.xyz * 1.1; rv -= n * dot(rv, n);
         float rr = length(rv) / 1.1;
@@ -742,8 +743,10 @@ function buildFlowers(S, world) {
   pts.frustumCulled = false;
   return pts;
 }
+// Fireflies are not painted: they glow on top of the finished painting (see Post), so they never
+// disturb the strokes around them. They hide behind anything standing in front of them.
 function buildFireflies(S) {
-  const n = 320;
+  const n = 110;
   const rng = mulberry32(9);
   const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), size = new Float32Array(n);
   const seeds = [];
@@ -757,7 +760,32 @@ function buildFireflies(S) {
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
   geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
-  const mat = pointsMaterial(S, true);
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uPxScale: S.uPxScale, uAmt: { value: 1 }, tDepth: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uNear: { value: 0.1 }, uFar: { value: 3000 } },
+    vertexShader: /* glsl */ `
+      attribute vec3 aColor; attribute float aSize;
+      uniform float uPxScale; uniform float uAmt;
+      varying vec3 vCol; varying float vDepth;
+      void main(){
+        vec4 mv = viewMatrix * vec4(position, 1.0);
+        gl_PointSize = clamp(aSize * uAmt * uPxScale / -mv.z * 3.0, 0.0, 70.0) * smoothstep(0.6, 2.5, -mv.z);
+        vCol = aColor; vDepth = -mv.z;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D tDepth; uniform vec2 uRes; uniform float uNear, uFar, uAmt;
+      varying vec3 vCol; varying float vDepth;
+      void main(){
+        float r = length(gl_PointCoord - 0.5) * 2.0;
+        if (r > 1.0) discard;
+        float d = texture(tDepth, gl_FragCoord.xy / uRes).r * 2.0 - 1.0;
+        float sceneD = 2.0 * uNear * uFar / (uFar + uNear - d * (uFar - uNear));
+        if (sceneD < vDepth - 0.3) discard;               // something stands in front
+        float core = smoothstep(0.32, 0.0, r), halo = (1.0 - r) * (1.0 - r);
+        gl_FragColor = vec4(vCol * (core * 1.3 + halo * 0.35) * min(uAmt, 1.0), 1.0);
+      }`,
+    transparent: true, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false,
+  });
   const pts = new THREE.Points(geo, mat);
   pts.frustumCulled = false;
   const BOX = 70;
@@ -851,7 +879,7 @@ export function buildScene(S, world) {
   scene.add(buildOlives(S, world));
   scene.add(buildLamps(S, world));
   scene.add(buildFlowers(S, world));
-  const fireflies = buildFireflies(S); scene.add(fireflies);
+  const fireflies = buildFireflies(S); // drawn by Post as a glowing overlay, not into the painted scene
   const crows = buildCrows(S); scene.add(crows);
   return { scene, sky, fireflies, crows };
 }

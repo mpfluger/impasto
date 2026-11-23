@@ -297,6 +297,20 @@ export function buildWorld() {
     addCyp(x, z, h, h * (0.11 + R() * 0.03));
     if (R() < 0.35) addCyp(x + 3 + R() * 2, z + (R() - 0.5) * 4, h * 0.7, h * 0.08);
   }
+  // a few halfway down the hill toward the village (their own random stream, so nothing else moves)
+  const R2 = mulberry32(4242);
+  const slopeAt = (t, side) => {
+    const x = START.x + (VILLAGE.x - START.x) * t, z = START.z + (VILLAGE.z - START.z) * t;
+    return [x + side, z + (R2() - 0.5) * 12];
+  };
+  const halfway = [];
+  for (let k = 0, made = 0; k < 200 && made < 6; k++) {
+    const [x, z] = slopeAt(0.2 + R2() * 0.35, (R2() < 0.5 ? -1 : 1) * (10 + R2() * 38));
+    if (!okGround(x, z, 3.5) || nearHouse(x, z, 3) || cypresses.some((c) => Math.hypot(c.x - x, c.z - z) < 7)) continue;
+    const h = 10 + R2() * 9;
+    addCyp(x, z, h, h * (0.12 + R2() * 0.03)); made++;
+    halfway.push([x, z]);
+  }
   for (const c of cypresses) {
     c.y = heightAt(c.x, c.z) - 0.6;
     obstacles.push({ x: c.x, z: c.z, r: c.r * 0.45 });
@@ -322,6 +336,14 @@ export function buildWorld() {
       olives.push({ x, z, y: heightAt(x, z) - 0.2, s: 0.8 + R() * 0.5, rot: R() * Math.PI * 2, v: Math.floor(R() * 3) });
       if (olives.length > 160) break;
     }
+  }
+  // rounded trees in small groups on the slope, near the new cypresses
+  for (let k = 0, made = 0; k < 400 && made < 13; k++) {
+    const [cx, cz] = halfway.length ? halfway[k % halfway.length] : [START.x, START.z - 50];
+    const x = cx + (R2() - 0.5) * 22, z = cz + (R2() - 0.5) * 22;
+    if (!okGround(x, z, 3) || nearHouse(x, z, 3) || olives.some((o) => Math.hypot(o.x - x, o.z - z) < 4.5)) continue;
+    if (cypresses.some((c) => Math.hypot(c.x - x, c.z - z) < 3.5)) continue;
+    olives.push({ x, z, y: heightAt(x, z) - 0.2, s: 0.85 + R2() * 0.5, rot: R2() * Math.PI * 2, v: Math.floor(R2() * 3) }); made++;
   }
   for (const o of olives) { obstacles.push({ x: o.x, z: o.z, r: 0.5 * o.s }); splatAO(o.x, o.z, 4.5 * o.s, 0.45); }
 

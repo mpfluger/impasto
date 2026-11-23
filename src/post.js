@@ -31,6 +31,8 @@ export class Post {
     this.rtPaint = new THREE.WebGLRenderTarget(4, 4, { ...lin, depthBuffer: false });
     this.rtB1 = new THREE.WebGLRenderTarget(4, 4, { ...lin, depthBuffer: false });
     this.rtB2 = new THREE.WebGLRenderTarget(4, 4, { ...lin, depthBuffer: false });
+    this.rtGlow = new THREE.WebGLRenderTarget(4, 4, { ...lin, depthBuffer: false });
+    this.overlay = new THREE.Scene(); // things that glow on top of the finished painting (fireflies)
 
     // Pass 1: drag colour along the brush field (line-integral convolution), and smooth the two
     // world-anchored stroke seeds: A along the flow (its level sets become lanes), B across it
@@ -282,7 +284,7 @@ export class Post {
     this.finalMat = new THREE.ShaderMaterial({
       uniforms: {
         tPaint: { value: this.rtPaint.texture }, tColor: { value: this.rtScene.textures[0] }, tDepth: { value: this.rtScene.depthTexture },
-        tBloom: { value: this.rtB1.texture },
+        tBloom: { value: this.rtB1.texture }, tGlow: { value: this.rtGlow.texture },
         uRes: { value: new THREE.Vector2() }, uScreen: { value: new THREE.Vector2() },
         uNear: { value: 0.1 }, uFar: { value: 3000 }, uTime: S.uTime, uDream: S.uDream,
         uReveal: { value: 0 }, uPaintOn: { value: 1 }, uBloom: { value: 0.8 }, uRelief: { value: 5.2 },
@@ -291,7 +293,7 @@ export class Post {
       },
       vertexShader: VS,
       fragmentShader: COMMON + /* glsl */ `
-        uniform sampler2D tPaint; uniform sampler2D tColor; uniform sampler2D tDepth; uniform sampler2D tBloom;
+        uniform sampler2D tPaint; uniform sampler2D tColor; uniform sampler2D tDepth; uniform sampler2D tBloom; uniform sampler2D tGlow;
         uniform vec2 uRes; uniform vec2 uScreen;
         uniform float uNear, uFar, uTime, uDream, uReveal, uPaintOn, uBloom, uRelief, uSat, uContrast, uVignette;
         uniform vec3 uOutline; uniform vec3 uCanvas; uniform vec3 uLightView;
@@ -309,6 +311,30 @@ export class Post {
           vec2 ripple = vec2(sin(vUv.y * 9.0 + uTime * 0.7), cos(vUv.x * 8.0 + uTime * 0.6));
           float amp = (0.0018 + 0.0028 * uDream) * (0.6 + 0.7 * toSide);
           vec2 uv = vUv + ripple * amp;
+          // The background flows around things: near the outline of anything standing nearer, what lies
+          // behind is gently pushed away from it and swirled along it, slowly breathing. The object itself
+          // stays still; only the world behind it bends, like air shimmering round a flame.
+          vec2 pxs = 1.0 / uRes * (uRes.y / 1080.0);
+          float dHere = linD(vUv);
+          vec2 toward = vec2(0.0);
+          for (int k = 0; k < 8; k++){
+            float a = float(k) * 0.7854;
+            vec2 dir = vec2(cos(a), sin(a));
+            for (int j = 0; j < 3; j++){
+              float rad = j == 0 ? 10.0 : (j == 1 ? 22.0 : 40.0);
+              float dn = linD(vUv + dir * rad * pxs);
+              float occ = smoothstep(0.06, 0.3, (dHere - dn) / dHere);   // a nearer thing lies that way
+              toward += dir * occ * (j == 0 ? 0.5 : (j == 1 ? 0.33 : 0.2));
+            }
+          }
+          float tl = length(toward);
+          if (tl > 1e-3){
+            vec2 nrmT = toward / tl, along = vec2(-nrmT.y, nrmT.x);
+            float breathe = 0.65 + 0.35 * sin(uTime * 0.7 + dHere * 0.03);
+            float swirl = sin(uTime * 0.45 + dHere * 0.02 + vUv.x * 3.0);
+            float strength = smoothstep(0.0, 1.2, tl) * (7.0 + 12.0 * uDream) * breathe;
+            uv += (-nrmT * 0.8 + along * swirl * 0.9) * strength * pxs;
+          }
           vec2 px = 1.0 / uRes;
           vec4 P = texture(tPaint, uv);
           vec3 col = P.rgb;
@@ -368,9 +394,10 @@ export class Post {
           col = mix(col, oc * (0.55 + 0.7 * lum(col)), edge * 0.8 * uPaintOn);
 
           col += texture(tBloom, vUv).rgb * uBloom;
+          col += texture(tGlow, vUv).rgb;                      // fireflies, glowing over the paint
 
           float l = lum(col);
-          col = mix(vec3(l), col, uSat * (1.06 + 0.3 * uDream));
+          col = mix(vec3(l), col, uSat * (0.97 + 0.3 * uDream));   // a touch less saturated than before
           // acid drift: hues wander in slow waves across the canvas, a little always, much more in a dream
           float wave = sin(vUv.x * 2.3 + vUv.y * 1.7 + uTime * 0.13) + 0.6 * sin(vUv.x * -1.4 + vUv.y * 3.1 - uTime * 0.09 + 2.0);
           float hr = sin(uTime * 0.11) * (0.05 + 0.4 * uDream) + wave * (0.035 + 0.33 * uDream) + sin(uTime * 0.043 + 1.7) * 0.025;
@@ -407,6 +434,7 @@ export class Post {
     this.rtScene.setSize(w, h);
     this.rtLic.setSize(w, h);
     this.rtPaint.setSize(w, h);
+    this.rtGlow.setSize(w, h);
     const bw = Math.max(1, Math.floor(w / 4)), bh = Math.max(1, Math.floor(h / 4));
     this.rtB1.setSize(bw, bh); this.rtB2.setSize(bw, bh);
     this.paintMat.uniforms.uRes.value.set(w, h);
@@ -440,6 +468,16 @@ export class Post {
     r.setClearColor(0x000000, 0);
     r.clear(true, true, false);
     r.render(scene, camera);
+
+    // the glowing overlay, tested against the scene's depth so it hides behind trees and hills
+    this.overlay.traverse((o) => {
+      const u = o.material && o.material.uniforms;
+      if (u && u.tDepth) { u.tDepth.value = this.rtScene.depthTexture; u.uRes.value.set(this.w, this.h); u.uNear.value = camera.near; u.uFar.value = camera.far; }
+    });
+    r.setRenderTarget(this.rtGlow);
+    r.setClearColor(0x000000, 0);
+    r.clear(true, false, false);
+    r.render(this.overlay, camera);
 
     this.pass(this.licMat, this.rtLic);
     this.pass(this.paintMat, this.rtPaint);

@@ -52,6 +52,7 @@ async function boot() {
   S.uSkySeedF.value = 1 / BRUSH;
 
   const post = new Post(renderer, S);
+  post.overlay.add(fireflies);
   const tod = new TimeOfDay(S);
   const player = new Player(camera, canvas, world);
   const audio = new Soundscape();
