@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { buildWorld, START, heightAt } from './world.js';
+import { buildWorld } from './world.js';
 import { buildScene } from './objects.js';
 import { createUniforms, TimeOfDay } from './palette.js';
 import { Post } from './post.js';
@@ -29,7 +29,7 @@ async function boot() {
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false, stencil: false });
-  } catch (e) {
+  } catch {
     return fail('This painting needs WebGL 2. Please open it in a recent Chrome, Edge or Firefox with hardware acceleration on.');
   }
   if (!renderer.extensions.has('EXT_color_buffer_float') && !renderer.extensions.has('EXT_color_buffer_half_float')) {
@@ -113,7 +113,7 @@ async function boot() {
         const p2 = canvas.requestPointerLock();
         if (p2 && p2.catch) p2.catch(lockRefused);
       });
-    } catch (e) { lockRefused(); }
+    } catch { lockRefused(); }
     syncMouse();
   };
   const release = () => { if (document.pointerLockElement) { ourRelease = true; document.exitPointerLock(); } };
@@ -269,7 +269,7 @@ async function boot() {
     crows.userData.update(elapsed, 1 - tod.night);
     waterDeep.copy(grade.waterDeep); // water colour follows the mood
 
-    audio.update({ night: tod.night, day: tod.day, dream, wind: S.uWind.value.length(), speed: player.speed, wheat: player.inWheat, height: player.pos.y });
+    audio.update({ night: tod.night, day: tod.day, dream, wind: S.uWind.value.length(), speed: player.speed, height: player.pos.y });
 
     camera.updateMatrixWorld();
     post.render(scene, camera, grade, { reveal, paint });

@@ -1,83 +1,107 @@
-# Saint-Rémy: a walk inside a painting
+# Saint-Rémy
 
-A contemplative walking simulator set inside a living, Van Gogh-style oil painting.
-Wander from a hilltop cypress down through meadows, lavender and ploughed fields to a
-lamplit village by a lake, beneath a sky of turning vortices and haloed stars.
+**A walk inside a living Van Gogh painting.**
 
-## Run it
+Wander a hillside in Provence painted stroke by stroke in thick oil paint: under the sky of
+*The Starry Night*, past flame-like cypresses, down to a lamplit village and a lake. Every surface
+is made of brush strokes that stay on the world as you move. The sky is repainted slowly, a stroke
+at a time, as if Vincent were still at work on it. Stand still long enough and the painting begins
+to dream.
 
-```
-python serve.py
-```
+![The starting view at night: the swirling sky, the crescent moon, cypresses and the village below](docs/screenshot.jpg)
 
-Then open http://localhost:5173 in Chrome, Edge or Firefox. Any static file server works.
-The page loads Three.js from a CDN, so the first load needs an internet connection.
-Add `?instant` to the URL to skip the title card.
+**[Step inside →](https://mpfluger.github.io/saint-remy/)**
+
+It runs in a desktop browser with WebGL 2 (recent Chrome, Edge or Firefox), keyboard and mouse.
+A dedicated graphics card helps; resolution adapts automatically if the frame rate drops.
 
 ## Controls
 
-| Key | |
+| | |
 |---|---|
-| WASD / arrows | wander |
-| mouse | look (held while you are inside the painting) |
-| Esc | leave fullscreen; in a window, back to the title |
-| Shift | hurry |
-| Space | float |
-| T (hold) | hasten time |
-| 1 2 3 4 | jump to night / dawn / day / dusk |
-| P | lift the paint (see the raw 3D world) |
-| M | sound on/off |
-| H | hide words |
-| F | fullscreen |
-| X | back to the title |
-| ? | show every key |
+| **W A S D** / arrows | walk |
+| **mouse** | look (held while you're inside the painting) |
+| **Shift** | hurry |
+| **Space** | float |
+| **Esc** | leave fullscreen; in a window, back to the title |
+| **F** | fullscreen |
+| **1 2 3 4** | night, dawn, day, dusk |
+| **T** (hold) | hasten time |
+| **P** | lift the paint and see the 3D world beneath |
+| **M** | sound on / off |
+| **H** | hide the words |
+| **X** | back to the title |
+| **?** | all of the above |
 
-Stand still (looking around slowly is fine) and after about 12 seconds the painting begins to
-dream: the swirls quicken, strokes lengthen, colours drift, the far mountains heave like slow
-swells, and around half a minute in a line from Vincent's letters surfaces. Gazing up at the
-sky hurries it along.
+Stand still for about a dozen seconds, gazing at the sky helps, and the painting starts to dream.
+
+## Running it locally
+
+There is no build step: the page loads its ES modules directly, and Three.js from a CDN.
+
+```sh
+npm install
+npm start          # http://localhost:5173, caching off so edits show on reload
+```
+
+Any static file server works too. Add `?instant` to the URL to skip the title.
+
+| | |
+|---|---|
+| `npm run lint` | ESLint |
+| `npm run test:unit` | world generation, time of day, and facts that must agree across files (Node's test runner) |
+| `npm run test:e2e` | boots the page in your installed Chrome: shaders compile, the scene paints, the title and keys work |
+| `npm run screenshot` | recaptures `docs/screenshot.jpg` |
+
+CI runs all of it on every push and pull request; pushes to `main` that pass are deployed to
+GitHub Pages.
 
 ## How it is painted
 
-The look comes from the pipeline, not from textures. There are no image assets at all.
+Nothing is an image file. The world is ordinary 3D geometry, painted every frame in four passes:
 
-1. **Scene pass (3 render targets).** Every material writes its colour, a *brush field* (the
-   screen-space direction a stroke should run at that pixel: along contours on hills, furrows
-   in fields, roads, spirals on cypresses, vortices in the sky), and the stroke the pixel belongs
-   to. Stroke centres are scattered on a world-space grid whose size follows distance, so
-   strokes stay attached to the surface they were painted on and keep a steady size on screen.
-2. **Drag pass.** A line-integral convolution drags colour along the brush field.
-3. **Stroke pass.** Each pixel gathers the strokes whose centres lie nearby along the flow.
-   Each stroke is laid along the flow at its own centre, filled with the colour found there:
-   set down bluntly, narrowing and running dry where the brush lifted, with a rounded crown,
-   bristle furrows and a ridge of paint at its end. The two uppermost strokes are kept, one laid
-   over the other. Each stroke is mixed separately: a pale tint with lead white, the mid tone or
-   a deeper shade, nudged warm or cool, with streaks of unmixed paint. Flowers are single domed blobs.
-4. **Finish.** The stroke heights are lit like impasto by the scene's own light (the moon by
-   night, the sun by day) as seen from where you stand, so ridges catch the light and shadows swing
-   as you turn; each stroke casts a short shadow onto the paint beneath it. Dark contour lines
-   follow depth edges (umber round the cypress), the mountain ridge keeps a dark line against the
-   sky, and the canvas weave shows where paint is thin. Then bloom, a grade, a slow ripple and
-   colour drift, and grain.
+1. **Scene.** Each material writes three targets: its colour and material id, a *brush field*
+   (the direction a stroke should run on screen: along contours, up the cypress flames, round the
+   sky's vortices), and the *stroke it belongs to*. Stroke centres are scattered over each
+   surface in world space, spaced by distance so strokes keep a steady size on screen.
+2. **Drag.** Colour is smeared along the brush field, giving each stroke the colour beneath it.
+3. **Strokes.** Each pixel gathers nearby strokes and draws them as tapered, bristled capsules
+   laid along the flow, the most recent on top, each mixed slightly differently, as on a palette.
+4. **Finish.** The stroke heights are lit like impasto by the scene's own light, so ridges catch
+   it and cast small shadows as you move. Then outlines, bloom, colour drift, a slow ripple, and the
+   background bending gently around the edges of nearer things.
 
-The sky follows The Starry Night: its eleven stars and crescent moon where the painting has them,
-courses of strokes round each vortex, and Vincent's dark ultramarine dashes between the light
-strokes. The sky is painted live: strokes stay where they were laid, and every so often each is
-repainted in place, a new stroke dragged in over it in the newer colours of the turning swirl.
-The hills roll in rounded blue forms; the cypress rises in S-curving flame tongues with umber
-creases; the trees round the village are painted in curls.
+The sky follows *The Starry Night*: its eleven stars and crescent moon where the painting has them,
+rings of strokes round each vortex, and the dark ultramarine dashes between the light strokes.
 
-Four moods blend with the sun's height: *The Starry Night*, a rose dawn,
-*Wheat Field with Cypresses* and *The Sower*. The soundscape (chords, twinkles, wind,
-crickets, birds, footsteps) is synthesised live with WebAudio.
+## Working on it
 
-Resolution adapts automatically to keep the frame rate smooth.
+Things that aren't obvious from the code:
 
-## Files
+- **Three.js is pinned in three places** that must agree: the import map URL and its `integrity`
+  hash in `index.html`, and `devDependencies` in `package.json` (which tests and tooling use).
+  A unit test checks all three. To upgrade, change the version in both files, `npm install`, then
+  take the new hash from
+  `node -e "console.log('sha384-'+require('crypto').createHash('sha384').update(require('fs').readFileSync('node_modules/three/build/three.module.js')).digest('base64'))"`.
+  Dependabot is told to leave `three` alone for this reason.
+- **The sky's repaint schedule is written twice**, in `src/glsl.js` (which moment each stroke's
+  colour is taken from) and `src/post.js` (when its new paint is drawn in). They must match
+  exactly; a unit test compares them. Stroke hashes are rounded to 1/1024 because they travel
+  through a half-float texture, and both sides must see the same value.
+- **Strokes on moving things** (swaying trees, the dream's heaving hills) are chosen on the
+  object's resting shape and carried along with it (`strokeCellMoved`), otherwise they crawl.
+- **Material ids** are written to the colour target's alpha (+0.5 means "no outline") and index the
+  per-material tables at the top of `src/post.js`. Strokes never cross from one id to another.
+- **`window.__painting`** exposes the uniforms, player, time of day and a `debug` object
+  (`dream`, `fixedScale`). The browser tests and the screenshot script rely on it.
 
-- `src/world.js`: terrain, field patchwork, roads, lake, village, vegetation (seeded)
-- `src/glsl.js`: shared shader code: noise, stroke seeds, flow projection, lighting, sky
-- `src/objects.js`: meshes and materials
-- `src/post.js`: paint, bloom and composite passes
-- `src/palette.js`: time of day, moods, sky vortices and stars
-- `src/player.js`, `src/audio.js`, `src/main.js`
+## Credits
+
+- *The Starry Night* (1889) and the other paintings evoked here are by Vincent van Gogh, in the
+  public domain; the lines that surface in the dream are from his letters.
+- Built with [Three.js](https://threejs.org/) (MIT). Type set in Cormorant Garamond (SIL Open Font
+  License), served by Google Fonts.
+
+## License
+
+[MIT](LICENSE)

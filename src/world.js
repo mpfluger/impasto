@@ -47,11 +47,6 @@ export function fbm2(x, y, oct = 4) {
   for (let i = 0; i < oct; i++) { s += a * snoise2(x * f + i * 17.3, y * f - i * 9.1); n += a; a *= 0.5; f *= 2.03; }
   return s / n;
 }
-function ridged2(x, y, oct = 4) {
-  let a = 0.5, f = 1, s = 0, n = 0;
-  for (let i = 0; i < oct; i++) { let r = 1 - Math.abs(snoise2(x * f + 3.1 * i, y * f + 7.7 * i)); r *= r; s += a * r; n += a; a *= 0.5; f *= 2.1; }
-  return s / n;
-}
 export const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -165,6 +160,7 @@ export function normalAt(x, z) {
 }
 
 // ---------- field patchwork (Voronoi) ----------
+// field types are stored by number in the patch texture; 1 (once wheat) is no longer used
 export const FIELD = { MEADOW: 0, WHEAT: 1, PLOUGHED: 2, LAVENDER: 3, YOUNG: 4, OLIVE: 5 };
 const CELL = 34;
 const CELLS = Math.ceil(MAP_HALF / CELL) + 2;
@@ -364,9 +360,6 @@ export function buildWorld() {
   }
   for (const l of lamps) obstacles.push({ x: l.x, z: l.z, r: 0.25 });
 
-  // ---- wheat stalks ----
-  const wheat = []; // the wheat was removed: it isn't in the painting
-
   // ---- wildflowers (poppies, irises, daisies) ----
   const flowers = [];
   const palette = [[0.86, 0.16, 0.1], [0.92, 0.25, 0.12], [0.98, 0.95, 0.85], [0.38, 0.35, 0.85], [0.98, 0.82, 0.2], [0.85, 0.45, 0.7]];
@@ -375,12 +368,12 @@ export function buildWorld() {
     const x = (R() - 0.5) * 420, z = (R() - 0.5) * 420 - 40;
     const f = fieldAt(x, z), rd = roadDistance(x, z);
     const near = Math.hypot(x - START.x, z - START.z);
-    const keep = (f === FIELD.MEADOW && R() < 0.8) || (f === FIELD.OLIVE && R() < 0.3) || (rd > 1.8 && rd < 4.5) || (f === FIELD.WHEAT && R() < 0.07);
+    const keep = (f === FIELD.MEADOW && R() < 0.8) || (f === FIELD.OLIVE && R() < 0.3) || (rd > 1.8 && rd < 4.5);
     if (!keep || lakeField(x, z) < 1.1 || rd < 1.6 || Math.hypot(x, z) > 330) continue;
-    const pick = f === FIELD.WHEAT ? (R() < 0.8 ? 0 : 3) : near < 60 && R() < 0.3 ? 3 : Math.floor(R() * palette.length);
+    const pick = near < 60 && R() < 0.3 ? 3 : Math.floor(R() * palette.length);
     const c = palette[pick];
     flowers.push(x, heightAt(x, z) + 0.25 + R() * 0.35, z, c[0], c[1], c[2], 0.14 + R() * 0.12);
   }
 
-  return { patch, road, houses, cypresses, olives, lamps, wheat: new Float32Array(wheat), flowers: new Float32Array(flowers), obstacles };
+  return { patch, road, houses, cypresses, olives, lamps, flowers: new Float32Array(flowers), obstacles };
 }

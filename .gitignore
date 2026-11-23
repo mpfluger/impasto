@@ -1,4 +1,6 @@
-__pycache__/
-*.pyc
+node_modules/
+test-results/
+playwright-report/
+.claude/
 .DS_Store
 Thumbs.db

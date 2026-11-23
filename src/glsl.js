@@ -116,25 +116,6 @@ vec4 strokeCentre(vec3 wp, float dist, out float s){
   vec4 c = nearestCentre(wp / s);
   return vec4(c.xyz * s, fract(c.w + s * 0.137));
 }
-// The brush direction over a wheat field: along the crests of the wind waves rolling across it,
-// curling as gusts pass, so the field is painted as one sweeping, rippling surface.
-vec3 wheatWindT(vec2 xz){
-  float g = snoise(vec3(xz * 0.035 - uWind * uTime * 0.4, uTime * 0.05));
-  float c = snoise(vec3(xz * 0.07, 5.0));
-  float a = atan(uWind.y, uWind.x) + 1.5708 + g * 1.2 + c * 0.8;
-  return vec3(cos(a), 0.0, sin(a));
-}
-// A cheaper version for small things like wheat blades: each joins the jittered cell it stands in.
-vec4 strokeCentreCheap(vec3 wp, float dist, out float s){
-  float lod = log2(max(dist * uStrokeWorld, 1e-4));
-  float l0 = floor(lod);
-  s = exp2(l0);
-  if (hash13(floor(wp / s) + 0.37) < lod - l0) s *= 2.0;
-  vec3 c = floor(wp / s);
-  float hc = hash13(c);
-  vec3 fp = c + 0.15 + 0.7 * fract(hc * vec3(1.0, 37.93, 413.31) + vec3(0.0, 0.31, 0.67));
-  return vec4(fp * s, fract(hc * 911.71 + 0.123 + s * 0.137));
-}
 `;
 
 export const FRAG = /* glsl */ `
@@ -169,16 +150,6 @@ void strokeCell(vec3 wp, float dist){
 void strokeCellMoved(vec3 rest, vec3 wp, float dist){
   float s; vec4 c = strokeCentre(rest, dist, s);
   strokeFromCentre(c.xyz + (wp - rest), c.w, s, wp);
-}
-// A wheat field is painted on its canopy: a virtual surface at the height of the ears. Every pixel
-// on the same line of sight maps to the same canopy point, whether it shows a blade or the ground
-// between blades, so broad strokes run across the field without breaking up by depth.
-void strokeCellCanopy(vec3 wp, float groundY){
-  vec3 rd = normalize(wp - cameraPosition);
-  float tg = (groundY + 1.1 - cameraPosition.y) / min(rd.y, -0.02);
-  vec3 cp = tg > 0.0 ? cameraPosition + rd * tg : wp;
-  float s; vec4 c = strokeCentreCheap(cp, length(cp - cameraPosition) * 1.5, s);
-  strokeFromCentre(c.xyz, c.w, s, cp);
 }
 // The same for things at infinity (the sky): centres scattered over the sphere of directions.
 void strokeCellDir(vec3 d, float F){

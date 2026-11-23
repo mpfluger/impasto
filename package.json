@@ -1,0 +1,26 @@
+{
+  "name": "saint-remy",
+  "version": "1.0.0",
+  "description": "A contemplative walk inside a living, Van Gogh-style oil painting, rendered in the browser with WebGL2.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "lint": "eslint .",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --test tests/unit/",
+    "test:e2e": "playwright test",
+    "screenshot": "node scripts/screenshot.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "three": "0.170.0"
+  }
+}

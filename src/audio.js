@@ -1,5 +1,5 @@
 // A generative soundscape: slow chords, a few twinkling notes, wind, crickets at night,
-// birds by day, footsteps and rustling wheat. Everything is synthesised; no audio files.
+// birds by day and footsteps. Everything is synthesised; no audio files.
 
 const CHORDS = [
   [50, 57, 62, 64, 66, 69],   // D maj9
@@ -53,11 +53,6 @@ export class Soundscape {
     this.windG = ctx.createGain(); this.windG.gain.value = 0.0;
     wind.connect(this.windF).connect(this.windG); this.windG.connect(this.dry); this.windG.connect(this.reverb);
     wind.start();
-    // wheat rustle
-    const rus = ctx.createBufferSource(); rus.buffer = this.noise; rus.loop = true; rus.playbackRate.value = 1.7;
-    const rf = ctx.createBiquadFilter(); rf.type = 'highpass'; rf.frequency.value = 2400;
-    this.rusG = ctx.createGain(); this.rusG.gain.value = 0;
-    rus.connect(rf).connect(this.rusG).connect(this.dry); rus.start();
 
     this.nextChord = ctx.currentTime + 0.3; this.ci = 0;
     this.nextTw = ctx.currentTime + 4; this.nextCr = ctx.currentTime + 1; this.nextBird = ctx.currentTime + 3;
@@ -172,6 +167,5 @@ export class Soundscape {
     if (st.day > 0.3 && t > this.nextBird) { this.bird(t + 0.02, 0.025 * st.day); this.nextBird = t + 2 + Math.random() * 7; }
     this.windG.gain.setTargetAtTime(0.03 + st.wind * 0.05 + st.dream * 0.04 + st.height * 0.002, t, 0.8);
     this.windF.frequency.setTargetAtTime(300 + st.wind * 250 + Math.sin(t * 0.3) * 120, t, 0.8);
-    this.rusG.gain.setTargetAtTime(st.wheat * Math.min(1, st.speed / 3) * 0.07, t, 0.15);
   }
 }

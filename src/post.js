@@ -10,7 +10,7 @@ float vnoise2(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 
 
 // Per material id. LEN: how far the brush drags colour (fraction of screen height).
 // WID: brush width relative to the spacing of stroke centres. JIT: how differently each stroke is mixed.
-//            sky   land  wheat cyp   olive trunk wall  roof  water glow  crow  flower
+//            sky   land  (2)   cyp   olive trunk wall  roof  water glow  crow  flower
 const LEN = [0.085, 0.06, 0.034, 0.05, 0.042, 0.03, 0.036, 0.034, 0.07, 0.012, 0.004, 0.008, 0.03, 0.03, 0.03, 0.03];
 const WID = [1.45, 1.35, 1.0, 1.2, 1.15, 1.05, 1.05, 1.05, 1.3, 1.0, 1.0, 1.0, 1.1, 1.1, 1.1, 1.1]; // overlapping, so the canvas is always covered
 const JIT = [0.85, 1.0, 1.0, 1.0, 1.0, 0.8, 0.5, 0.7, 0.9, 0.25, 0.15, 0.35, 0.8, 0.8, 0.8, 0.8];
@@ -60,7 +60,7 @@ export class Post {
           vec2 stepUv = vec2(L / float(N)) / uRes;
           vec3 acc = c0.rgb; float accA = f0.z; float wsum = 1.0;
           // the brush direction is averaged along the path too (as doubled angles, since a stroke has no
-          // front or back), so strokes don't flip between neighbouring blades of wheat and the ground
+          // front or back); the sky's strokes take their direction from this smoothed field
           vec2 dd0 = dirAt(vUv); vec2 accD = vec2(dd0.x * dd0.x - dd0.y * dd0.y, 2.0 * dd0.x * dd0.y);
           for (int s = 0; s < 2; s++){
             vec2 p = vUv; vec2 d = dirAt(vUv) * (s == 0 ? 1.0 : -1.0);
@@ -111,8 +111,6 @@ export class Post {
           vec2 d = dirMode == 0 ? texture(tSeed, uv).zw : texture(tFlow, uv).xy;
           float l = length(d); return l > 1e-4 ? d / l : vec2(1.0, 0.0);
         }
-        // the wheat and the ground it grows from are painted as one surface, so strokes can run across both
-        float grp(float id){ return abs(id - 2.0) < 0.5 ? 1.0 : id; }
 
         // Each stroke is mixed on the palette separately: a pale tint with lead white, the mid tone
         // or a deeper shade, nudged warm or cool and toward teal or violet; streaks of unmixed paint
@@ -172,7 +170,7 @@ export class Post {
               vec2 C = vec2(qi) + 0.5 + st.xy;                   // the stroke's centre, in pixels
               if (length(P - C) > st.w * wmul * 3.0) continue;   // too far away to reach this pixel
               vec4 lc = texture(tLic, C / uRes);
-              if (abs(grp(lc.a) - grp(id0)) > 0.5) continue;    // strokes stay on their own object (wheat and ground are one)
+              if (abs(lc.a - id0) > 0.5) continue;              // strokes stay on their own object
               // sky strokes are repainted in turn: each repaint is a new stroke (new shape, the newer colour),
               // dragged in from its start, and the most recently painted lie on top
               float ord = prio, age = 1e3, sh = prio;

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { heightAt, START, WATER_Y, BOUNDS, fieldAt, FIELD } from './world.js';
+import { heightAt, START, WATER_Y, BOUNDS } from './world.js';
 
 const EYE = 1.65;
 
@@ -17,7 +17,6 @@ export class Player {
     this.locked = false;
     this.onStep = () => {};
     this.speed = 0;
-    this.inWheat = 0;
 
     addEventListener('keydown', (e) => { this.keys.add(e.code); if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault(); });
     addEventListener('keyup', (e) => this.keys.delete(e.code));
@@ -86,9 +85,7 @@ export class Player {
     const rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
     let wx = fx * f + rx * s, wz = fz * f + rz * s;
     const l = Math.hypot(wx, wz); if (l > 0) { wx /= l; wz /= l; }
-    // slow down a little when wading through wheat
-    this.inWheat += ((fieldAt(this.pos.x, this.pos.z) === FIELD.WHEAT ? 1 : 0) - this.inWheat) * Math.min(1, dt * 3);
-    const target = sp * (1 - this.inWheat * 0.18);
+    const target = sp;
     const acc = 1 - Math.exp(-dt * (l > 0 ? 5 : 7));
     this.vel.x += (wx * target - this.vel.x) * acc;
     this.vel.z += (wz * target - this.vel.z) * acc;

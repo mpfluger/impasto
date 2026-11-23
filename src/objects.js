@@ -115,19 +115,10 @@ function buildTerrain(S, world) {
       vec3 meadowT = sl > 0.03 ? normalize(mix(curl, contour / sl, smoothstep(0.08, 0.35, sl))) : curl;
       vec3 T = meadowT;
       vec3 base;
-      float wheatGround = 0.0;
       if (type < 0.5) {            // meadow
         base = mix(vec3(0.22, 0.45, 0.22), vec3(0.5, 0.68, 0.27), sx);
         base = mix(base, vec3(0.7, 0.74, 0.34), smoothstep(0.72, 0.97, sy) * 0.7);
         base = mix(base, vec3(0.14, 0.34, 0.32), smoothstep(0.3, 0.05, sy) * 0.6);
-      } else if (type < 1.5) {     // wheat
-        base = mix(vec3(0.72, 0.5, 0.13), vec3(0.92, 0.76, 0.27), sx);
-        base = mix(base, vec3(0.5, 0.58, 0.2), smoothstep(0.25, 0.04, sy) * 0.5);
-        base = mix(base, vec3(0.9, 0.45, 0.12), smoothstep(0.85, 1.0, sy) * 0.5);
-        T = wheatWindT(vW.xz);
-        // the ground under the wheat shares the wheat's strokes, so the field is one painted surface
-        strokeCellCanopy(vW, vW.y);
-        wheatGround = 1.0;
       } else if (type < 2.5) {     // ploughed earth, furrows converging in perspective
         base = mix(vec3(0.4, 0.25, 0.2), vec3(0.7, 0.46, 0.22), st);
         base = mix(base, vec3(0.36, 0.28, 0.56), (1.0 - st) * smoothstep(0.5, 0.1, sy) * 0.85);
@@ -169,84 +160,9 @@ function buildTerrain(S, world) {
       col += lampLight(vW, base);
       col = nightShift(col);
       col = applyFog(col, dist);
-      writeOut(col, 1.0, 1.0 - wheatGround, screenDir(vW, T), seeds); // no contour lines inside the wheat
+      writeOut(col, 1.0, 1.0, screenDir(vW, T), seeds);
     }`, { tPatch: { value: tPatch }, tRoad: { value: tRoad } });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.frustumCulled = false;
-  return mesh;
-}
-
-// ---------------------------------------------------------------- wheat
-function buildWheat(S, world) {
-  const SEGS = 5;
-  const pos = [], index = [];
-  for (let k = 0; k <= SEGS; k++) { const h = k / SEGS; pos.push(-0.5, h, 0, 0.5, h, 0); }
-  for (let k = 0; k < SEGS; k++) { const a = k * 2; index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setIndex(index);
-  const count = world.wheat.length / 4;
-  const mat = makeMat(S, /* glsl */ `
-    varying vec3 vW; varying float vH; varying float vRnd; varying vec3 vT; varying vec3 vNrm;
-    varying float vRootY;
-    void main(){
-      vec3 root = instanceMatrix[3].xyz;
-      float rnd = hash12(root.xz * 3.1);
-      float h = position.y;
-      // beyond a few dozen metres single blades can't be told apart; there the field is the painted
-      // wheat surface of the ground itself, which takes broad strokes cleanly. Blades shrink away.
-      float H = (0.85 + rnd * 0.6) * (1.0 - smoothstep(24.0, 42.0, length(root - cameraPosition)));
-      float w = mix(0.024, 0.011, h);
-      w = mix(w, 0.036, smoothstep(0.6, 0.76, h)) * (1.0 - smoothstep(0.88, 1.0, h) * 0.85);
-      vec3 side = normalize(vec3(instanceMatrix[0].x, 0.0, instanceMatrix[0].z));
-      // wind rolls over the field in broad, slow waves; each blade only adds a faint lazy sway of its own
-      float gust = snoise(vec3(root.xz * 0.035 - uWind * uTime * 0.4, uTime * 0.05));
-      vec2 bend = uWind * (0.22 + 0.45 * (gust * 0.5 + 0.5)) * (1.0 + uDream * 0.7)
-                + vec2(sin(uTime * 0.55 + rnd * 6.0), cos(uTime * 0.47 + rnd * 5.0)) * 0.018;
-      vec2 away = root.xz - uPlayer.xz; float dp = length(away);
-      bend += away / max(dp, 0.01) * smoothstep(1.7, 0.3, dp) * 1.3;
-      vec3 p = root + side * position.x * w * 2.0 + vec3(0.0, h * H, 0.0);
-      p.xz += bend * h * h * H;
-      p.y -= dot(bend, bend) * h * h * H * 0.35;
-      vT = normalize(vec3(bend.x * 2.0 * h * H, H, bend.y * 2.0 * h * H));
-      vNrm = normalize(cross(side, vT));
-      vW = p; vH = h; vRnd = rnd;
-      vRootY = root.y;
-      gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
-    }`, /* glsl */ `
-    varying vec3 vW; varying float vH; varying float vRnd; varying vec3 vT; varying vec3 vNrm;
-    varying float vRootY;
-    void main(){
-      float dist = length(cameraPosition - vW);
-      vec3 rootC = mix(vec3(0.42, 0.42, 0.13), vec3(0.62, 0.44, 0.12), vRnd);
-      vec3 midC = mix(vec3(0.88, 0.64, 0.17), vec3(0.96, 0.8, 0.3), fract(vRnd * 7.3));
-      vec3 earC = mix(vec3(0.99, 0.87, 0.42), vec3(0.93, 0.56, 0.15), fract(vRnd * 13.1));
-      vec3 base = mix(rootC, midC, smoothstep(0.0, 0.5, vH));
-      base = mix(base, earC, smoothstep(0.6, 0.8, vH));
-      if (fract(vRnd * 31.7) < 0.08) base = mix(base, vec3(0.38, 0.6, 0.22), 0.6);
-      vec3 n = normalize(vNrm); if (!gl_FrontFacing) n = -n;
-      n = normalize(n + vec3(0.0, 0.7, 0.0));
-      vec3 col = shadeLit(base * (1.0 + uNight * 0.45), n, mix(0.7, 1.0, vH));
-      // light glowing through the ears when the sun is behind them
-      vec3 V = normalize(vW - cameraPosition);
-      float through = pow(max(dot(V, uLightDir), 0.0), 3.0) * smoothstep(0.3, 0.9, vH);
-      col += base * uLightCol * through * (1.0 - uNight) * 0.9;
-      col += lampLight(vW, base);
-      col = mix(nightShift(col), col, 0.4);
-      col = applyFog(col, dist);
-      vec2 seeds = vec2(fract(vRnd * 91.3 + vH * 0.3), fract(vRnd * 47.9 + vH * 0.5));
-      // the wheat is painted on its canopy, shared with the ground between the blades (see glsl.js)
-      strokeCellCanopy(vW, vRootY);
-      writeOut(col, 2.0, 0.0, screenDir(vW, wheatWindT(vW.xz)), seeds);
-    }`, {}, { side: THREE.DoubleSide });
-  const mesh = new THREE.InstancedMesh(geo, mat, count);
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new V3(1, 1, 1), up = new V3(0, 1, 0);
-  for (let i = 0; i < count; i++) {
-    q.setFromAxisAngle(up, world.wheat[i * 4 + 3] * Math.PI * 2);
-    m.compose(new V3(world.wheat[i * 4], world.wheat[i * 4 + 1] - 0.05, world.wheat[i * 4 + 2]), q, s);
-    mesh.setMatrixAt(i, m);
-  }
-  mesh.instanceMatrix.needsUpdate = true;
   mesh.frustumCulled = false;
   return mesh;
 }
@@ -691,7 +607,7 @@ function pointsMaterial(S, isGlow) {
     void main(){
       vec3 p = position;
       ${isGlow ? '' : `
-      // flowers nod with the same slow waves of wind as the wheat
+      // flowers nod in slow waves of wind
       float gust = snoise(vec3(p.xz * 0.035 - uWind * uTime * 0.4, uTime * 0.05));
       p.xz += uWind * (0.06 + 0.1 * gust) * (1.0 + uDream * 0.5);
       vec2 away = p.xz - uPlayer.xz; float dp = length(away);

@@ -36,7 +36,6 @@ const MOODS = {
   },
 };
 const COLOR_KEYS = Object.keys(MOODS.night).filter((k) => typeof MOODS.night[k] === 'string');
-const NUM_KEYS = Object.keys(MOODS.night).filter((k) => typeof MOODS.night[k] === 'number');
 const moodCols = {};
 for (const [name, m] of Object.entries(MOODS)) { moodCols[name] = {}; for (const k of COLOR_KEYS) moodCols[name][k] = new THREE.Color(m[k]); }
 
