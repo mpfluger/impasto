@@ -35,7 +35,7 @@ test('every shader compiles and the scene is painted', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('/?instant');
   await ready(page);
-  await frames(page, 20);
+  await frames(page, 6);
   expect(errors).toEqual([]);
   const { mean, sd } = await canvasVariety(page);
   expect(mean).toBeGreaterThan(10);   // not black
@@ -48,10 +48,10 @@ test('all four times of day and the dream render without errors', async ({ page 
   await ready(page);
   for (const key of ['2', '3', '4', '1']) {
     await page.keyboard.press(key);
-    await frames(page, 5);
+    await frames(page, 2);
   }
   await page.evaluate(() => { window.__painting.debug.dream = 1; });
-  await frames(page, 10);
+  await frames(page, 3);
   expect(errors).toEqual([]);
   expect((await canvasVariety(page)).sd).toBeGreaterThan(8);
 });

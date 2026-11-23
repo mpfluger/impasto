@@ -9,7 +9,9 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL: `http://localhost:${PORT}`,
-    viewport: { width: 960, height: 540 },
+    // small on purpose: without a GPU every frame is rendered in software, and these tests check that
+    // the painting compiles and paints, not how it looks
+    viewport: { width: 480, height: 270 },
     // the installed Chrome (also present on GitHub's runners), so no browser download is needed;
     // without a GPU it falls back to SwiftShader, which must be allowed explicitly
     channel: 'chrome',
