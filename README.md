@@ -1,8 +1,8 @@
-# Saint-Rémy
+# Impasto
 
 **A walk inside a living Van Gogh painting.**
 
-Wander a hillside in Provence painted stroke by stroke in thick oil paint: under the sky of
+Wander a hillside near Saint-Rémy, in Provence, painted stroke by stroke in thick oil paint: under the sky of
 *The Starry Night*, past flame-like cypresses, down to a lamplit village and a lake. Every surface
 is made of brush strokes that stay on the world as you move. The sky is repainted slowly, a stroke
 at a time, as if Vincent were still at work on it. Stand still long enough and the painting begins
@@ -10,7 +10,7 @@ to dream.
 
 ![The starting view at night: the swirling sky, the crescent moon, cypresses and the village below](docs/screenshot.jpg)
 
-**[Step inside →](https://mpfluger.github.io/saint-remy/)**
+**[Step inside →](https://mpfluger.github.io/impasto/)**
 
 It runs in a desktop browser with WebGL 2 (recent Chrome, Edge or Firefox), keyboard and mouse.
 A dedicated graphics card helps; resolution adapts automatically if the frame rate drops.
