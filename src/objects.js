@@ -838,8 +838,8 @@ function buildCrows(S) {
       float dist = length(cameraPosition - vW);
       vec3 col = mix(vec3(0.03, 0.04, 0.1), vec3(0.12, 0.13, 0.28), uDay * 0.4);
       writeOut(applyFog(col, dist), 10.0, 0.0, screenDir(vW, vec3(1.0, 0.0, 0.0)), vec2(0.5));
-    }`, {}, { side: THREE.DoubleSide });
-  const n = 34;
+    }`, {}, { side: THREE.DoubleSide, depthWrite: false }); // birds leave no depth, so the background never bends round them
+  const n = 14;
   const mesh = new THREE.InstancedMesh(geo, mat, n);
   mesh.frustumCulled = false;
   const rng = mulberry32(31);
